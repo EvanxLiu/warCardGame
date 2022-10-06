@@ -4,30 +4,47 @@
 #include <cstdlib>
 #include <ctime>
 
-std::string convertCardName(int cardValue);
+int readCardValue(std::string card);
 std::string playerOneName{};            
 std::string playerTwoName{};
-const std::string faces[13] = { "Deuce", "Three", "Four",
-    "Five", "Six", "Seven", "Eight",
-    "Nine", "Ten", "Jack", "Queen", "King", "Ace" };
-const std::string suits[4] = { "Spades", "Hearts",
-    "Diamonds", "Clubs" };
-int deckOfCards[52]{};                  //initial deck of cards that will get shuffled and distributed to two players
-int playerOneDeck[52]{};                //deck of cards used by the first player
-int playerTwoDeck[52]{};                //deck of cards used by the second player
-int playerOneDiscard[52]{};             //stores the cards that player one has won from player two
-int playerTwoDiscard[52]{};             //stores the cards that player two has won from player one
-int playerOneSelection[4]{};            //array storing the order and value of the 4 cards drawn by first player
-int playerTwoSelection[4]{};            //array storing the order and value of the 4 cards drawn by second player
+const std::string faces[13] = { "Deuce",        //array of faces used for the cards, listened in order from least to greatest
+"Three", "Four", "Five", "Six", 
+"Seven", "Eight",
+ "Nine", "Ten", "Jack", "Queen", "King", "Ace" }; 
+const std::string suits[4] = { "Clubs",         //array of suits used for the cards, listed in order from greatest to least
+"Diamonds", "Hearts", "Spades" };
+std::string deckOfCards[52]{};                  //initial deck of cards that will get shuffled and distributed to two players
+std::string playerOneDeck[52]{};                //deck of cards used by the first player
+std::string playerTwoDeck[52]{};                //deck of cards used by the second player
+std::string playerOneDiscard[52]{};             //stores the cards that player one has won from player two
+std::string playerTwoDiscard[52]{};             //stores the cards that player two has won from player one
+std::string playerOneSelection[4]{};            //array storing the order and value of the 4 cards drawn by first player
+std::string playerTwoSelection[4]{};            //array storing the order and value of the 4 cards drawn by second player
 int orderOfFour{ 0 };
-int drawnCards[4]{};                    //the 4 cards drawn by the players before they're reordered
-int selectionIndex{};                   //used to transfer user's selected order on to the ordered array from 0-3
+std::string drawnCards[4]{};                    //the 4 cards drawn by the players before they're reordered
+int selectionIndex{};                           //used to transfer user's selected order on to the ordered array from 0-3
 int realCardCounter{};
 int playerOneDiscardIndex{ 0 };
 int playerTwoDiscardIndex{ 0 };
+int selectedCardOrder[4]{}; 
 
-void getNames()
+void clear()                                    //function used to first ask the user to confirm they've read the text, before clearing the text upon their cue
 {
+    std::string userClear{};                    
+    std::cout << "Enter anything to continue: ";
+    std::cin >> userClear;                      //program has no use for what user inputs, just to make sure it clears after they enter something into the variable
+    std::cout << "\x1B[2J\x1B[H";               //printing this string will clear the screen
+    //system("cls");
+}
+
+void createLine()
+{
+    std::cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";
+}
+
+void getNames()                                 //function used at start of program to get users' names
+{
+    createLine();
     std::cout << "Welcome to Evan's war card game!\n";
     std::cout << "Please input player one's name: ";
     std::cin >> playerOneName;
@@ -35,28 +52,25 @@ void getNames()
     std::cout << "Please input player two's name: ";
     std::cin >> playerTwoName;
     std::cout << "Great, nice to meet you " << playerTwoName << "!\n";
-}
-void createDeck()   
-{
-    for (int i = 0; i < 52; i++)        //Creates the deck of cards with integer values from 0 to 51     
-    {
-        deckOfCards[i] = i;
-    }
+    createLine();
+    clear();
+    
 }
 
-void createDeckString()
+
+void createDeck()                               //Creates the values of the cards in the deck with string
 {
     for (int i = 0; i < 52; i++)
     {
-
+        deckOfCards[i] = faces[i / 4] + " of " + suits[i % 4];
     }
 }
 void shuffleDeck()
 {
-    for (int i = 0; i < 52; i++)        //Shuffles deck by randomizing card swaps throughout the deck
+    for (int i = 0; i < 52; i++)                //Shuffles deck by randomizing card swaps throughout the deck
     {
         int randomSelection{};
-        int temp{};
+        std::string temp{};
         randomSelection = rand() % 52;
         temp = deckOfCards[i];
         deckOfCards[i] = deckOfCards[randomSelection];
@@ -65,14 +79,14 @@ void shuffleDeck()
 } 
 void createPlayerDecks()
 { 
-    for (int i = 0; i < 52; i++)        //-1 symbolizes that the element of the deck is empty
+    for (int i = 0; i < 52; i++)                //fills each element as empty initially before they're filled
     {
-        playerOneDeck[i] = -1;
-        playerTwoDeck[i] = -1;
-        playerOneDiscard[i] = -1;
-        playerTwoDiscard[i] = -1;
+        playerOneDeck[i] = "empty";
+        playerTwoDeck[i] = "empty";
+        playerOneDiscard[i] = "empty";
+        playerTwoDiscard[i] = "empty";
     }
-    for (int i = 0; i < 52; i++)        //distributes initial deck of cards to the piles of the two players
+    for (int i = 0; i < 52; i++)                //distributes initial deck of cards to the piles of the two players
     {
         if (i % 2 == 0)
         {
@@ -82,157 +96,160 @@ void createPlayerDecks()
         {
             playerTwoDeck[i / 2] = deckOfCards[i];
         }
-        deckOfCards[i] = -1;           
+        deckOfCards[i] = "empty";           
     }
 }
-int remainingCardsPlayerOne()
+int remainingCardsPlayer(int playerNumber)                   //scans through the deck of player and counts the number of elements with no card       
 {
     realCardCounter = 0;
     for (int i = 51; i >= 0; i--)
     {
-
-        if (playerOneDeck[i] != -1)
+        if (playerNumber == 1)
         {
-            realCardCounter++;
+            if (playerOneDeck[i] != "empty")
+            {
+                realCardCounter++;
+            }
+        }        
+        else
+        {
+            if (playerTwoDeck[i] != "empty")
+            {
+                realCardCounter++;
+            }
         }
     }
     return realCardCounter;
 }
-int remainingCardsPlayerTwo()
+
+void drawCards(int playerNumber)
 {
     realCardCounter = 0;
     for (int i = 51; i >= 0; i--)
     {
-
-        if (playerTwoDeck[i] != -1)
+        if (playerNumber == 2)
         {
-            realCardCounter++;
-        }
-    }
-    return realCardCounter;
-    
-}
-void drawCardsOne()
-{
-    realCardCounter = 0;
-    for (int i = 51; i >= 0; i--)       //Outputs remaining amount of cards in player One's deck
-    {
-
-        if (playerOneDeck[i] != -1)
-        {
-            realCardCounter++;
-            drawnCards[realCardCounter - 1] = playerOneDeck[i];
-            playerOneDeck[i] = -1;
-        }
-        if (realCardCounter == 4)
-        {
-
-            break;
-        }
-    }
-    realCardCounter = 0;
-}
-void drawCardsTwo()
-{
-    realCardCounter = 0;
-    for (int i = 51; i >= 0; i--)
-    {
-
-        if (playerTwoDeck[i] != -1)
-        {
-            realCardCounter++;
-            drawnCards[realCardCounter - 1] = playerTwoDeck[i];
-            playerTwoDeck[i] = -1;
-        }
-        if (realCardCounter == 4)
-        {
-            break;
-        }
-    }
-}
-int remainingDiscardCardsOne()
-{
-    realCardCounter = 0;
-    for (int i = 51; i >= 0; i--)
-    {
-
-        if (playerOneDiscard[i] != -1)
-        {
-            realCardCounter++;
-        }
-    }
-    return realCardCounter;
-}
-int remainingDiscardCardsTwo()
-{
-    realCardCounter = 0;
-    for (int i = 51; i >= 0; i--)
-    {
-
-        if (playerTwoDiscard[i] != -1)
-        {
-            realCardCounter++;
-        }
-    }
-    return realCardCounter;
-}
-int playerOrder()
-{
-    int playerOrderWOW{0};
-    std::cout << "Select the order by entering any order of 1, 2, 3, 4: ";
-    std::cin >> playerOrderWOW;
-    if (std::cin.eof())
-    {
-        std::cout << "Please enter a valid input\n";
-        std::cin.clear();
-        std::cin.ignore(600, '\n');
-        playerOrder();
-        
-    }
-    else
-    {
-        if (playerOrderWOW != 1234 && playerOrderWOW != 1243 && playerOrderWOW != 1324 && playerOrderWOW != 1342 && playerOrderWOW != 1432 && playerOrderWOW != 1423 && playerOrderWOW != 2143 && playerOrderWOW != 2134
-            && playerOrderWOW != 2431 && playerOrderWOW != 2413 && playerOrderWOW != 2341 && playerOrderWOW != 2314 && playerOrderWOW != 3124 && playerOrderWOW != 3142 && playerOrderWOW != 3241 && playerOrderWOW != 3214 && playerOrderWOW != 3421 &&
-            playerOrderWOW != 3412 && playerOrderWOW != 4321 && playerOrderWOW != 4312 && playerOrderWOW != 4231 && playerOrderWOW != 4213 && playerOrderWOW != 4132 && playerOrderWOW != 4123)
-        {
-            std::cout << "Please enter a valid order\n";
-            playerOrder();
+            if (playerTwoDeck[i] != "empty")
+            {
+                realCardCounter++;
+                drawnCards[realCardCounter - 1] = playerTwoDeck[i];
+                playerTwoDeck[i] = "empty";
+            }
         }
         else
         {
-            return playerOrderWOW;
+            if (playerOneDeck[i] != "empty")
+            {
+                realCardCounter++;
+                drawnCards[realCardCounter - 1] = playerOneDeck[i];
+                playerOneDeck[i] = "empty";
+            }
+        }
+        if (realCardCounter == 4)
+        {
+            break;
         }
     }
-  
+}
+int remainingDiscardCards(int playerNumber)
+{
+    realCardCounter = 0;
+    for (int i = 51; i >= 0; i--)
+    {
+        if (playerNumber == 1)
+        {
+            if (playerOneDiscard[i] != "empty")
+            {
+                realCardCounter++;
+            }
+        }
+        else
+        {
+            if (playerTwoDiscard[i] != "empty")
+            {
+                realCardCounter++;
+            }
+        }
+    }
+    return realCardCounter;
 }
 
-void transferOrderOne()
+void ignoreLine()
 {
-    for (int i = 1000; i >= 1; i = i / 10)
+    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+}
+
+void playerOrder(int playerNumber)
+{
+    int selectedDuplicate{};
+    for (int i = 0; i<=3; ++i)
     {
-        playerOneSelection[selectionIndex] = drawnCards[orderOfFour / i - 1];
-        orderOfFour = orderOfFour % i;
-        selectionIndex++;
+        selectedDuplicate = 0;
+        std::cin.clear();
+        ignoreLine();
+        std::cout << "Select the card (ordered 1-4) you would like to play #" << i+1 << ": \n";
+        std::cin >> orderOfFour;
+        if (!std::cin || orderOfFour < 1 || orderOfFour>4)
+        {
+            std::cout << "Please enter a valid input\n";
+            --i;
+            continue;
+        }
+        else
+        {
+            for (int j = 0; j < 4; ++j)
+            {
+                if (orderOfFour-1 == selectedCardOrder[j])
+                {
+                    std::cout << "You have already chosen that card! Please enter another one\n";
+                    --i;
+                    selectedDuplicate = 1;
+                }
+            }
+            if (selectedDuplicate == 0)
+            {
+                selectedCardOrder[i] = orderOfFour - 1;
+                if (playerNumber == 1)
+                {
+                    playerOneSelection[i] = selectedCardOrder[i];
+                }
+                else
+                {
+                    playerTwoSelection[i] = selectedCardOrder[i];
+                }
+            
+            }
+            
+
+            
+        }
+    }
+    
+}
+
+void transferOrder(int playerNumber)
+{
+    for (int i = 0; i<=3; ++i)
+    {
+        if (playerNumber == 1)
+        {
+            playerOneSelection[i] = drawnCards[selectedCardOrder[i]];
+        }
+        else
+        {
+            playerTwoSelection[i] = drawnCards[selectedCardOrder[i]];
+        }
     }
 }
 
-void transferOrderTwo()
-{
-    for (int i = 1000; i >= 1; i = i / 10)
-    {
-        playerTwoSelection[selectionIndex] = drawnCards[orderOfFour / i - 1];
-        orderOfFour = orderOfFour % i;
-        selectionIndex++;
-    }
-}
 
 void compareCards()
 {
     for (int i = 0; i <= 3; i++)
     {
-        if (playerOneSelection[i] > playerTwoSelection[i])
+        if (readCardValue(playerOneSelection[i]) > readCardValue(playerTwoSelection[i]))
         {
-            std::cout << convertCardName(playerOneSelection[i]) << " is greater than " << convertCardName(playerTwoSelection[i]) << ", so both cards will go to " << playerOneName << "'s discard pile!\n";
+            std::cout << playerOneName << " played the " << playerOneSelection[i] << ", which is greater than " << playerTwoName << "'s selection of the " << playerTwoSelection[i] << ", so both cards will go to " << playerOneName << "'s discard pile!\n\n";
             playerOneDiscard[playerOneDiscardIndex] = playerTwoSelection[i];
             playerOneDiscardIndex++;
             playerOneDiscard[playerOneDiscardIndex] = playerOneSelection[i];
@@ -240,7 +257,7 @@ void compareCards()
         }
         else
         {
-            std::cout << convertCardName(playerTwoSelection[i]) << " is greater than " << convertCardName(playerOneSelection[i]) << ", so both cards will go to " << playerTwoName << "'s discard pile!\n";
+            std::cout << playerTwoName << " played the " << playerTwoSelection[i] << ", which is greater than " << playerOneName << "'s selection of the " << playerOneSelection[i] << ", so both cards will go to " << playerTwoName << "'s discard pile!\n\n";
             playerTwoDiscard[playerTwoDiscardIndex] = playerTwoSelection[i];
             playerTwoDiscardIndex++;
             playerTwoDiscard[playerTwoDiscardIndex] = playerOneSelection[i];
@@ -250,68 +267,82 @@ void compareCards()
     }
 }
 
-void shuffleDiscardOne(int remainingCards, int remainingDiscard)
-{
-    srand(time(NULL));
-    int tempRemain{ remainingCards };
-    int tempDiscard{ remainingDiscard };
-    while (remainingCards <= 52&&remainingDiscard>0)
-    {
-        playerOneDeck[remainingCards] = playerOneDiscard[remainingDiscard - 1];
-        playerOneDiscard[remainingDiscard - 1] = -1;
-        remainingCards++;
-        remainingDiscard--;
-    }
-    for (int i = 0; i < (tempRemain+tempDiscard); i++)        //Shuffles deck by randomizing card swaps throughout the deck
-    {
-        int randomSelection{};
-        int temp{};
-        randomSelection = rand() % (tempRemain+tempDiscard);
-        temp = playerOneDeck[i];
-        playerOneDeck[i] = playerOneDeck[randomSelection];
-        playerOneDeck[randomSelection] = temp;
-    }
-    playerOneDiscardIndex = 0;
-}
-
-void shuffleDiscardTwo(int remainingCards, int remainingDiscard)
+void shuffleDiscard(int remainingCards, int remainingDiscard, int playerNumber)
 {
     srand(time(NULL));
     int tempRemain{ remainingCards };
     int tempDiscard{ remainingDiscard };
     while (remainingCards <= 52 && remainingDiscard > 0)
     {
-        playerTwoDeck[remainingCards] = playerTwoDiscard[remainingDiscard - 1];
-        playerTwoDiscard[remainingDiscard - 1] = -1;
+        if (playerNumber == 1)
+        {
+            playerOneDeck[remainingCards] = playerOneDiscard[remainingDiscard - 1];
+            playerOneDiscard[remainingDiscard - 1] = "empty";
+        }
+        else
+        {
+            playerTwoDeck[remainingCards] = playerTwoDiscard[remainingDiscard - 1];
+            playerTwoDiscard[remainingDiscard - 1] = "empty";
+        }
         remainingCards++;
         remainingDiscard--;
     }
     for (int i = 0; i < (tempRemain + tempDiscard); i++)        //Shuffles deck by randomizing card swaps throughout the deck
     {
         int randomSelection{};
-        int temp{};
+        std::string temp{};
         randomSelection = rand() % (tempDiscard+tempRemain);
-        temp = playerTwoDeck[i];
-        playerTwoDeck[i] = playerTwoDeck[randomSelection];
-        playerTwoDeck[randomSelection] = temp;
+        if (playerNumber == 1)
+        {
+            temp = playerOneDeck[i];
+            playerOneDeck[i] = playerOneDeck[randomSelection];
+            playerOneDeck[randomSelection] = temp;
+        }
+        else
+        {
+            temp = playerTwoDeck[i];
+            playerTwoDeck[i] = playerTwoDeck[randomSelection];
+            playerTwoDeck[randomSelection] = temp;
+        }
+        
     }
     playerTwoDiscardIndex = 0;
-}
-std::string convertCardName(int cardValue)
-{
-    return faces[cardValue / 4] + " of " + suits[cardValue % 4];
+    playerOneDiscardIndex = 0;
 }
 
 int readCardValue(std::string card)
 {
-    int index = card.find(' ');
-    for (int i = 0; i < 13; i++)
+    std::string cardCopy = card;
+    int cardValue{};
+    int index = cardCopy.find(' ');
+    std::string suit{};
+    int suitIndex = index + 4;
+    for (int i = 0; i < 13; ++i)
     {
         if (card.substr(0, index) == faces[i])
         {
-            return i + 2;
+            cardValue = i * 5;
+            for (int j = 0; j < 4; ++j)
+            {
+                cardValue--;
+                if (cardCopy.substr(suitIndex, cardCopy.length()) == suits[j])
+                {
+                    return cardValue;
+                }
+            }
         }
+        
     }
+    
+}
+
+void clearSelection()
+{
+    for (int i = 0; i <= 3; ++i)
+    {
+        selectedCardOrder[i] = -1;
+    }
+
 }
 int main()
 {
@@ -331,10 +362,14 @@ int main()
     createDeck();
     shuffleDeck();
     createPlayerDecks();
+    clearSelection();
     while (gameEnd == false)
     {
-        oneCards = remainingCardsPlayerOne();
-        oneDiscard = remainingDiscardCardsOne();
+        std::cout << "It is now " << playerOneName << "'s turn!\n";
+        clear();
+        oneCards = remainingCardsPlayer(1);
+        oneDiscard = remainingDiscardCards(1);
+        createLine();
         std::cout << playerOneName << ", you have " << oneCards << " cards left in your deck, and " << oneDiscard << " cards left in your discard pile.\n";
         if (oneCards < 4)
         {
@@ -344,23 +379,37 @@ int main()
             }
             else
             {
+                createLine();
                 std::cout << "Because you don't have enough cards in your deck, your discard pile will be shuffled into it.\n";
-                shuffleDiscardOne(oneCards, oneDiscard);
-                oneCards = remainingCardsPlayerOne();
-                oneDiscard = remainingDiscardCardsOne();
+                createLine();
+                shuffleDiscard(oneCards, oneDiscard, 1);
+                oneCards = remainingCardsPlayer(1);
+                oneDiscard = remainingDiscardCards(1);
                 std::cout << playerOneName << ", you now have " << oneCards << " cards left in your deck, and " << oneDiscard << " cards left in your discard pile.\n";
             }
         }
-        drawCardsOne();
-        std::cout << playerOneName << ", you drew the " << convertCardName(drawnCards[0]) << ", " << convertCardName(drawnCards[1]) << ", " << convertCardName(drawnCards[2]) << ", " << convertCardName(drawnCards[3]) << '\n';
-        orderOfFour = playerOrder();
-        transferOrderOne();
+        
+        drawCards(1);
+        createLine();
+        std::cout << playerOneName << ", you drew the " << drawnCards[0] << ", " << drawnCards[1] << ", " << drawnCards[2] << ", " << drawnCards[3] << '\n';
+        createLine();
+        playerOrder(1);
+        transferOrder(1);
+        clearSelection();
         selectionIndex = 0;
-        std::cout << playerOneName << ", you will play your cards in the order of " << convertCardName(playerOneSelection[0]) << ", " << convertCardName(playerOneSelection[1]) << ", " << convertCardName(playerOneSelection[2]) << ", " << convertCardName(playerOneSelection[3]) << '\n';
-
-        twoCards = remainingCardsPlayerTwo();
-        twoDiscard = remainingDiscardCardsTwo();
+        createLine();
+        std::cout << playerOneName << ", you will play your cards in the order of " << playerOneSelection[0] << ", " << playerOneSelection[1] << ", " << playerOneSelection[2] << ", " << playerOneSelection[3] << '\n';
+        createLine();
+        clear();
+        createLine();
+        std::cout << "It is now " << playerTwoName << "'s turn!\n";
+        createLine();
+        clear();
+        twoCards = remainingCardsPlayer(2);
+        twoDiscard = remainingDiscardCards(2);
+        createLine();
         std::cout << playerTwoName << ", you have " << twoCards << " cards left in your deck, and " << twoDiscard << " cards left in your discard pile.\n";
+        createLine();
         if (twoCards < 4)
         {
             if (twoCards+twoDiscard < 4)
@@ -370,30 +419,43 @@ int main()
             }
             else
             {
+                createLine();
                 std::cout << "Because you don't have enough cards in your deck, your discard pile will be shuffled into it.\n";
-                shuffleDiscardTwo(twoCards, twoDiscard);
-                twoCards = remainingCardsPlayerTwo();
-                twoDiscard = remainingDiscardCardsTwo();
-                std::cout << playerOneName << ", you now have " << twoCards << " cards left in your deck, and " << twoDiscard << " cards left in your discard pile.\n";
+                createLine();
+                shuffleDiscard(twoCards, twoDiscard, 2);
+                twoCards = remainingCardsPlayer(2);
+                twoDiscard = remainingDiscardCards(2);
+                createLine();
+                std::cout << playerTwoName << ", you now have " << twoCards << " cards left in your deck, and " << twoDiscard << " cards left in your discard pile.\n";
+                createLine();
             }
         }
-        drawCardsTwo();
-        std::cout << playerTwoName << ", your 4 cards are " << convertCardName(drawnCards[0]) << ", " << convertCardName(drawnCards[1]) << ", " << convertCardName(drawnCards[2]) << ", " << convertCardName(drawnCards[3]) << '\n';
-        orderOfFour = playerOrder();
-        transferOrderTwo();
+        drawCards(2);
+        std::cout << playerTwoName << ", your 4 cards are " << drawnCards[0] << ", " << drawnCards[1] << ", " << drawnCards[2] << ", " << drawnCards[3] << '\n';
+        createLine();
+        playerOrder(2);
+        transferOrder(2);
+        clearSelection();
         selectionIndex = 0;
-        std::cout << playerTwoName << ", you will play your cards in the order of " << convertCardName(playerTwoSelection[0]) << ", " << convertCardName(playerTwoSelection[1]) << ", " << convertCardName(playerTwoSelection[2]) << ", " << convertCardName(playerTwoSelection[3]) << '\n';
-
+        createLine();
+        std::cout << playerTwoName << ", you will play your cards in the order of " << playerTwoSelection[0] << ", " << playerTwoSelection[1] << ", " << playerTwoSelection[2] << ", " << playerTwoSelection[3] << '\n';
+        createLine();
+        clear();
         compareCards();
+        clear();
     }
     
     if (playerOneWin == true)
     {
+        std::cout << "\n*******************************************************************************************************\n";
         std::cout << "Congrats " << playerOneName << "! You have won the game, as your opponent does not have enough cards in their deck or discard pile.\n";
+        std::cout << "*********************************************************************************************************\n";
     }
     else
     {
+        std::cout << "\n*******************************************************************************************************\n";
         std::cout << "Congrats " << playerTwoName << "! You have won the game, as your opponent does not have enough cards in their deck or discard pile.\n";
+        std::cout << "*******************************************************************************************************\n";
     }
     return 0;
 }
